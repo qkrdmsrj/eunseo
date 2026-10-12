@@ -1,0 +1,38 @@
+name: Report Weekly Throughput
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  report-throughput:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Count merged pull requests from the last seven days
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          START_TIME=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          MERGED_COUNT=$(gh api --paginate \
+            "repos/$REPOSITORY/pulls?state=closed&sort=updated&direction=desc&per_page=100" \
+            --jq '.[] | select(.merged_at != null) | .merged_at' \
+            | awk -v start="$START_TIME" -v end="$END_TIME" '$0 >= start && $0 <= end { count++ } END { print count + 0 }')
+
+          {
+            echo "## Weekly Throughput"
+            echo
+            echo "| Metric | Value |"
+            echo "| --- | ---: |"
+            echo "| Period (UTC) | $START_TIME to $END_TIME |"
+            echo "| Merged pull requests | $MERGED_COUNT |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Weekly throughput: $MERGED_COUNT merged pull request(s)"
