@@ -39,7 +39,7 @@ jobs:
   track-lead-time-centos:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    container: quay.io/centos/centos:stream9
+    container: rockylinux:9
 
     steps:
       - name: Calculate Lead Time on CentOS
@@ -47,7 +47,6 @@ jobs:
           FIRST_COMMIT_TIME="${{ github.event.pull_request.created_at }}"
           MERGE_TIME="${{ github.event.pull_request.merged_at }}"
 
-          # dnf install을 생략하고 이미 기본 내장된 date 명령어로 바로 계산합니다.
           LEAD_TIME=$(($(date -d "$MERGE_TIME" +%s) - $(date -d "$FIRST_COMMIT_TIME" +%s)))
 
           echo "Lead Time: $LEAD_TIME seconds"
