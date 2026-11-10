@@ -1,4 +1,3 @@
-# .github/workflows/metrics.yml
 name: Track Lead Time
 
 on:
@@ -39,8 +38,7 @@ jobs:
   track-lead-time-centos:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    container: quay.io/centos/centos:stream9
-    continue-on-error: true
+    container: rockylinux:9
 
     steps:
       - name: Calculate Lead Time on CentOS

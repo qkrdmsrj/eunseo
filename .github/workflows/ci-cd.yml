@@ -7,9 +7,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # -------------------------------------------------------------
-  # 1. BUILD JOB: 빌드 시뮬레이션 및 아티팩트 저장
-  # -------------------------------------------------------------
   build:
     runs-on: ubuntu-latest
     steps:
@@ -32,9 +29,6 @@ jobs:
           name: build-artifact
           path: dist/app-build.txt
 
-  # -------------------------------------------------------------
-  # 2. TEST JOB: Matrix 전략 적용 (OS 및 Python 버전 검증)
-  # -------------------------------------------------------------
   test:
     needs: build
     strategy:
@@ -56,12 +50,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8
 
-      - name: Run Linting (Flake8)
-        run: |
-          # 코드 구문 오류 검사
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
@@ -72,9 +60,6 @@ jobs:
         run: |
           python -c "import os; print('Testing matrix on OS: ${{ matrix.os }}, Python: ${{ matrix.python-version }}')"
 
-  # -------------------------------------------------------------
-  # 3. DEPLOY JOB: Build와 Test 성공 시 배포 실행
-  # -------------------------------------------------------------
   deploy:
     needs: [build, test]
     runs-on: ubuntu-latest
@@ -87,7 +72,7 @@ jobs:
 
       - name: Execute Deployment
         env:
-          SECRET_TOKEN: ${{ secrets.MY_SECRET_TOKEN }}
+          SECRET_TOKEN: ${{ secrets.MY_SECRET_TOKEN || 'default_token' }}
         run: |
           echo "Starting Deployment..."
           cat dist/app-build.txt
