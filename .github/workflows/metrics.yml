@@ -1,14 +1,12 @@
 # .github/workflows/metrics.yml
 name: Track Lead Time
 
-on: #when
+on:
   pull_request:
     types: [closed]
 
 jobs:
   track-lead-time:
-    # PR이 병합되었을 떄만 실행
-    # Run only when the pull request was merged
     if: github.event.pull_request.merged == true              
     runs-on: ubuntu-latest
 
@@ -18,7 +16,6 @@ jobs:
           FIRST_COMMIT_TIME="${{ github.event.pull_request.created_at }}"
           MERGE_TIME="${{ github.event.pull_request.merged_at }}"
 
-          # Calculate the time difference in seconds
           LEAD_TIME=$(($(date -d "$MERGE_TIME" +%s) - $(date -d "$FIRST_COMMIT_TIME" +%s)))
 
           echo "Lead Time: $LEAD_TIME seconds"
@@ -33,7 +30,6 @@ jobs:
           FIRST_COMMIT_TIME="${{ github.event.pull_request.created_at }}"
           MERGE_TIME="${{ github.event.pull_request.merged_at }}"
 
-          # macOS uses BSD date instead of GNU date.
           FIRST_COMMIT_SECONDS=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$FIRST_COMMIT_TIME" +%s)
           MERGE_SECONDS=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$MERGE_TIME" +%s)
           LEAD_TIME=$((MERGE_SECONDS - FIRST_COMMIT_SECONDS))
@@ -51,8 +47,7 @@ jobs:
           FIRST_COMMIT_TIME="${{ github.event.pull_request.created_at }}"
           MERGE_TIME="${{ github.event.pull_request.merged_at }}"
 
-          # CentOS provides GNU date through coreutils.
-          dnf install -y coreutils
+          # dnf install을 생략하고 이미 기본 내장된 date 명령어로 바로 계산합니다.
           LEAD_TIME=$(($(date -d "$MERGE_TIME" +%s) - $(date -d "$FIRST_COMMIT_TIME" +%s)))
 
           echo "Lead Time: $LEAD_TIME seconds"
