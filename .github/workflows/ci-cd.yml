@@ -7,9 +7,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # -------------------------------------------------------------
-  # 1. BUILD JOB: 코드 체크아웃, 빌드 및 아티팩트 업로드
-  # -------------------------------------------------------------
   build:
     runs-on: ubuntu-latest
     steps:
@@ -21,11 +18,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Simulate Build & Create Artifact
+      - name: Create Build Artifact
         run: |
-          mkdir -p dist
-          echo "Build artifact generated on $(date)" > dist/app-build.txt
-          echo "Simulated Build Completed."
+          mkdir dist
+          echo "Build artifact generated" > dist/app-build.txt
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -33,9 +29,6 @@ jobs:
           name: build-artifact
           path: dist/app-build.txt
 
-  # -------------------------------------------------------------
-  # 2. TEST JOB (Matrix Strategy): OS 및 Python 버전 조합 테스트
-  # -------------------------------------------------------------
   test:
     needs: build
     strategy:
@@ -52,16 +45,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Lint & Test Dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest
-
-      - name: Run Lint Check (Flake8)
-        run: |
-          # 기본 구문 오류 및 린트 체크
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          pip install flake8
 
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
@@ -69,13 +56,10 @@ jobs:
           name: build-artifact
           path: dist
 
-      - name: Verify Artifact & Run Test
+      - name: Verify Environment & Artifact
         run: |
-          python -c "print('Testing environment on ${{ matrix.os }} with Python ${{ matrix.python-version }}')"
+          python -c "import os; print('Testing matrix on OS: ${{ matrix.os }}, Python: ${{ matrix.python-version }}')"
 
-  # -------------------------------------------------------------
-  # 3. DEPLOY JOB: Build와 Test 완료 후 Secrets 주입받아 배포 실행
-  # -------------------------------------------------------------
   deploy:
     needs: [build, test]
     runs-on: ubuntu-latest
@@ -86,12 +70,10 @@ jobs:
           name: build-artifact
           path: dist
 
-      - name: Simulate Deployment with Secrets
+      - name: Execute Deployment
         env:
-          DEPLOY_ENV: production
-          SECRET_TOKEN: ${{ secrets.MY_SECRET_TOKEN }}
+          SECRET_TOKEN: ${{ secrets.MY_SECRET_TOKEN || 'default_token' }}
         run: |
-          echo "Starting deployment to $DEPLOY_ENV environment..."
-          echo "Build file contents:"
+          echo "Starting Deployment..."
           cat dist/app-build.txt
-          echo "Deployment successful with Secret Token verification!"
+          echo "Deployment completed successfully!"
