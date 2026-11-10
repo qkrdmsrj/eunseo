@@ -39,7 +39,8 @@ jobs:
   track-lead-time-centos:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    container: rockylinux:9
+    container: quay.io/centos/centos:stream9
+    continue-on-error: true
 
     steps:
       - name: Calculate Lead Time on CentOS
