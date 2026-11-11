@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+﻿name: CI/CD Pipeline
 
 on:
   push:
@@ -7,20 +7,34 @@ on:
     branches: [ "main" ]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.src_any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for source code changes
+        id: filter
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            src/**
+            *.py
+            requirements.txt
+
   build:
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Setup Python & Dependencies
+        uses: ./.github/actions/setup-python-deps
 
       - name: Create Build Artifact
         run: |
-          mkdir dist
+          mkdir -p dist
           echo "Build artifact generated" > dist/app-build.txt
 
       - name: Upload Build Artifact
@@ -30,38 +44,13 @@ jobs:
           path: dist/app-build.txt
 
   test:
-    needs: build
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ['3.10', '3.11']
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-
-      - name: Download Build Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact
-          path: dist
-
-      - name: Verify Environment & Artifact
-        run: |
-          python -c "import os; print('Testing matrix on OS: ${{ matrix.os }}, Python: ${{ matrix.python-version }}')"
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.src == 'true' || github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/reusable-test.yml
 
   deploy:
-    needs: [build, test]
+    needs: [changes, build, test]
+    if: ${{ (needs.changes.outputs.src == 'true' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download Build Artifact
@@ -70,10 +59,10 @@ jobs:
           name: build-artifact
           path: dist
 
-      - name: Execute Deployment
+      - name: Execute Selective Deployment
         env:
           SECRET_TOKEN: ${{ secrets.MY_SECRET_TOKEN || 'default_token' }}
         run: |
-          echo "Starting Deployment..."
+          echo "Executing production deployment..."
           cat dist/app-build.txt
-          echo "Deployment completed successfully!"
+          echo "Selective Deployment completed successfully!"
